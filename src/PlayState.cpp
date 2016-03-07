@@ -122,7 +122,7 @@ PlayState::CreateInitialWorld() {
   // Anadimos los objetos Shape y RigidBody ------------------------
   _shapes.push_back(Shape);
   cout << "\n\nAqui\n\n" << endl;    
-  //_bodies.push_back(rigidBodyPlane);//Aqui violacion de segmento ¿Por que?
+  _bodies.push_back(rigidBodyPlane);//Aqui violacion de segmento ¿Por que?
   
   cout << "\n\nFin listas\n\n" << endl;
 
@@ -192,8 +192,8 @@ PlayState::AddDynamicObject() {
   _numEntities++;
 
   // Anadimos los objetos a las deques
-  //_shapes.push_back(boxShape);   
-  //_bodies.push_back(rigidBox); Esta cola siempre da fallo
+  _shapes.push_back(boxShape);   
+  _bodies.push_back(rigidBox); 
 
   //-----------------------------------------------------------------
 
@@ -234,17 +234,17 @@ void PlayState::DetectCollisionAim() {
       cout << "PRIMER IF " << endl;
 
       if ((obOB_A != obTarget) && (obOB_A)) {
-		node = obOB_A->getRootNode(); delete obOB_A;
-		cout << "SEGUNDO IF " << endl;
+    		node = obOB_A->getRootNode(); delete obOB_A;
+    		cout << "SEGUNDO IF " << endl;
       }
       else if ((obOB_B != obTarget) && (obOB_B)) {
-		node = obOB_B->getRootNode(); delete obOB_B;
-		cout << "TERCERO IF " << endl;
+    		node = obOB_B->getRootNode(); delete obOB_B;
+    		cout << "TERCERO IF " << endl;
       }
 
       if (node) {
-		std::cout << node->getName() << std::endl; //LO eliminamos
-		_sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
+		    cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
+		    _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
       }
     } 
   }
