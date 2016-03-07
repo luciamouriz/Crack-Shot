@@ -1,0 +1,15 @@
+material Material
+{
+	technique
+	{
+		pass
+		{
+			diffuse 0.988774 1.000000 0.820391
+			specular 0.500000 0.500000 0.500000 12.500000
+			texture_unit
+			{
+				texture Untitled.jpg
+			}
+		}
+	}
+}

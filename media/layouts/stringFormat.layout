@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<GUILayout version="4">
+  <Window type="TaharezLook/FrameWindow" name="FormatWin">
+    <Property name="Text" value="Format String Window"/>
+    <Property name="TitlebarEnabled" value="True"/>
+    <Property name="Area" value="{{0.05,0},{0.05,0},{0.95,0},{0.95,0}}"/>
+    <!-- Static Text -->
+    <Window type="TaharezLook/StaticText" name="Text1">
+      <Property name="Area" value="{{0.05,0},{0.05,0},{0.95,0},{0.15,0}}"/>
+    </Window>
+    <Window type="TaharezLook/StaticText" name="Text2">
+      <Property name="Area" value="{{0.05,0},{0.20,0},{0.95,0},{0.30,0}}"/>
+    </Window>
+    <Window type="TaharezLook/StaticText" name="Text3">
+      <Property name="Area" value="{{0.05,0},{0.35,0},{0.95,0},{0.45,0}}"/>
+    </Window>
+    <Window type="TaharezLook/StaticText" name="Text4">
+      <Property name="Area" value="{{0.05,0},{0.50,0},{0.95,0},{0.60,0}}"/>
+    </Window>
+    <Window type="TaharezLook/StaticText" name="Text5">
+      <Property name="Area" value="{{0.05,0},{0.65,0},{0.95,0},{0.75,0}}"/>
+    </Window>
+    <!-- Exit Button -->
+    <Window type="TaharezLook/Button" name="ExitButton">
+      <Property name="Text" value="Exit" />
+      <Property name="Area" value="{{0,0},{0.95,0},{1,0},{1,0}}"/>
+    </Window>
+  </Window>
+</GUILayout>
