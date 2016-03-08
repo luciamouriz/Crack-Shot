@@ -131,7 +131,7 @@ PlayState::CreateInitialWorld() {
   //-------------------------------
 
   //Añado otra diana---------------- 
- // AddStaticObject(Vector3(15,3,0));
+  AddStaticObject(Vector3(15,3,0));
   //-------------------------------
 
 }
@@ -139,17 +139,17 @@ PlayState::CreateInitialWorld() {
 void 
 PlayState::AddStaticObject(Vector3 pos) {
   Entity* entAim = _sceneMgr->createEntity("Cylinder.mesh");
-  SceneNode* nodeAim = _sceneMgr->createSceneNode("Target");
+  SceneNode* nodeAim = _sceneMgr->createSceneNode("Target"+StringConverter::toString(_numEntities));
   nodeAim->attachObject(entAim);
   _sceneMgr->getRootSceneNode()->addChild(nodeAim);
-
+  cout<< "Nombre: " << nodeAim->getName() << endl;
   OgreBulletCollisions::StaticMeshToShapeConverter *trimeshConverter2 = new 
   OgreBulletCollisions::StaticMeshToShapeConverter(entAim);
  
   OgreBulletCollisions::TriangleMeshCollisionShape *Trimesh2 = trimeshConverter2->createTrimesh();
 
   OgreBulletDynamics::RigidBody *rigidObject2 = new 
-    OgreBulletDynamics::RigidBody("RigidBodydiana", _world);
+    OgreBulletDynamics::RigidBody("RigidBodydiana"+StringConverter::toString(_numEntities), _world);
   rigidObject2->setShape(nodeAim, Trimesh2, 0.5, 0.5, 0,pos,//4º Posicion inicial 
        Quaternion::IDENTITY); //El 5º parametro es la gravedad
 
@@ -164,7 +164,7 @@ PlayState::AddDynamicObject() {
   Vector3 position = (_camera->getDerivedPosition() + _camera->getDerivedDirection().normalisedCopy() * 10);
  
   Entity *entity = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow.mesh");
-  SceneNode *node = _sceneMgr->getRootSceneNode()->createChildSceneNode();
+  SceneNode *node = _sceneMgr->getRootSceneNode()->createChildSceneNode("Arrow" + StringConverter::toString(_numEntities)+"SN");
   node->attachObject(entity);
 
   //Obtengo la rotacion de la camara para lanzar la flecha correctamente--------------------
@@ -222,8 +222,51 @@ void PlayState::DetectCollisionAim() {
     btPersistentManifold* contactManifold = bulletWorld->getDispatcher()->getManifoldByIndexInternal(i);
     btCollisionObject* obA = (btCollisionObject*)(contactManifold->getBody0());
     btCollisionObject* obB = (btCollisionObject*)(contactManifold->getBody1());
+    //Recupero todas las dianas----------------------------------
+    std::vector <SceneNode* > _targets;
+    SceneNode::ChildNodeIterator it = _sceneMgr->getRootSceneNode()->getChildIterator();
+    while (it.hasMoreElements()){
+      String _name = it.getNext()->getName();
+      if (StringUtil::startsWith(_name,"Target")){
+        cout << "name: " << _name << endl;
+        _targets.push_back(_sceneMgr->getSceneNode(_name));
+      }
+      
+    }
+    //-----------------------------------------------------------
     
-    Ogre::SceneNode* target = _sceneMgr->getSceneNode("Target");
+    //Recorrer el vector y comprobar cada diana--
+    for (SceneNode* tar : _targets ){
+      Ogre::SceneNode* target = tar;
+
+      OgreBulletCollisions::Object *obTarget = _world->findObject(target);
+      OgreBulletCollisions::Object *obOB_A = _world->findObject(obA);
+      OgreBulletCollisions::Object *obOB_B = _world->findObject(obB);
+
+      if ((obOB_A == obTarget) || (obOB_B == obTarget)) {
+        Ogre::SceneNode* node = NULL;
+        cout << "PRIMER IF " << endl;
+
+        if ((obOB_A != obTarget) && (obOB_A)) {
+          node = obOB_A->getRootNode(); 
+          delete obOB_A;
+          cout << "SEGUNDO IF " << endl;
+        }
+        else if ((obOB_B != obTarget) && (obOB_B)) {
+          node = obOB_B->getRootNode(); 
+          delete obOB_B;
+          cout << "TERCERO IF " << endl;
+        }
+
+        if (node) {
+          cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
+          _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
+        }
+      }
+    }
+    //-------------------------------------------
+
+    /*Ogre::SceneNode* target = _sceneMgr->getSceneNode("Target0");
 
     OgreBulletCollisions::Object *obTarget = _world->findObject(target);
     OgreBulletCollisions::Object *obOB_A = _world->findObject(obA);
@@ -234,11 +277,13 @@ void PlayState::DetectCollisionAim() {
       cout << "PRIMER IF " << endl;
 
       if ((obOB_A != obTarget) && (obOB_A)) {
-    		node = obOB_A->getRootNode(); delete obOB_A;
+    		node = obOB_A->getRootNode(); 
+        delete obOB_A;
     		cout << "SEGUNDO IF " << endl;
       }
       else if ((obOB_B != obTarget) && (obOB_B)) {
-    		node = obOB_B->getRootNode(); delete obOB_B;
+    		node = obOB_B->getRootNode(); 
+        delete obOB_B;
     		cout << "TERCERO IF " << endl;
       }
 
@@ -246,7 +291,7 @@ void PlayState::DetectCollisionAim() {
 		    cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
 		    _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
       }
-    } 
+    }*/
   }
 }
 bool
@@ -283,7 +328,7 @@ PlayState::keyPressed
   //Movimiento camara---------------
   Vector3 vt(0,0,0);
   Real tSpeed = 20.0;
-  int _desp=5;
+  int _desp=25;
   if (e.key == OIS::KC_UP) {
     vt+=Vector3(0,0,-_desp);
   }

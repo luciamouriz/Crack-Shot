@@ -11,7 +11,7 @@ DIRHEA := include/
 CXX := g++
 
 # Flags de compilación -----------------------------------------------
-CXXFLAGS := -I $(DIRHEA) -Wall `pkg-config --cflags OIS OGRE OGRE-Overlay OgreBullet bullet` -I/usr/local/include/cegui-0/CEGUI -I/usr/local/include/cegui-0
+CXXFLAGS := -I $(DIRHEA) -Wall -std=c++11 `pkg-config --cflags OIS OGRE OGRE-Overlay OgreBullet bullet` -I/usr/local/include/cegui-0/CEGUI -I/usr/local/include/cegui-0
 
 # Flags del linker ---------------------------------------------------
 LDFLAGS := `pkg-config --libs OGRE` -L/usr/local/lib
