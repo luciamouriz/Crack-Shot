@@ -86,6 +86,8 @@ class PlayState : public Ogre::Singleton<PlayState>, public GameState
   void AddStaticObject(Vector3 pos);
   void DetectCollisionAim();
 
+  void updateCameraPosition();
+
 };
 
 #endif

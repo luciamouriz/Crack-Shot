@@ -10,6 +10,14 @@ using namespace std;
 
 template<> PlayState* Ogre::Singleton<PlayState>::msSingleton = 0;
 
+Vector3 _now;
+Vector3 _next;
+Vector3 _despCamera;
+std::vector<Vector3> _points;
+
+int _speedCam = 10;
+Vector3 _vnCam;
+
 void
 PlayState::enter ()
 {
@@ -69,6 +77,24 @@ PlayState::enter ()
   
   sheet->addChild(quitButton);
   //------------------------------
+
+  //Posicion de la camara, _now y _next
+  _now=_camera->getPosition();
+  _next=Vector3(-1,-1,-1);
+  //-----------------------------------
+
+  // Lista de puntos por lo que pasara la camara (Prueba)----
+  
+  Vector3 p1(30,15,15);
+  Vector3 p2(60,15,60);
+  Vector3 p3(30,15,50);
+
+  _points.push_back(p1);
+  _points.push_back(p2);
+  _points.push_back(p3);
+
+  //--------------------------------------------------------
+
 
   _exitGame = false;
 }
@@ -183,7 +209,7 @@ PlayState::AddDynamicObject() {
 
 
   OgreBulletDynamics::RigidBody *rigidBox = new OgreBulletDynamics::RigidBody("rigidBodyArrow" + StringConverter::toString(_numEntities), _world);
-  cout << "Aux: " << aux << endl;
+  
   rigidBox->setShape(node, boxShape,0.5 /* Restitucion */, 0.5 /* Friccion */,5.0 /* Masa */, position /* Posicion inicial */,
          quat /* Orientacion */);
 
@@ -210,7 +236,11 @@ PlayState::frameStarted
 
   DetectCollisionAim();
 
+  //Actualizacion de la camara-----------------------------
+  updateCameraPosition();
+  //----------------------------------------
 
+  //----------------------------------------
   return true;
 }
 
@@ -228,7 +258,6 @@ void PlayState::DetectCollisionAim() {
     while (it.hasMoreElements()){
       String _name = it.getNext()->getName();
       if (StringUtil::startsWith(_name,"Target")){
-        cout << "name: " << _name << endl;
         _targets.push_back(_sceneMgr->getSceneNode(_name));
       }
       
@@ -260,38 +289,19 @@ void PlayState::DetectCollisionAim() {
 
         if (node) {
           cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
+          //Creo una copia del nodo y lo pongo en la misma posicion y rotacion------------
+          Entity *ent = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow.mesh");
+          SceneNode *nod = _sceneMgr->getRootSceneNode()->createChildSceneNode("Arrow" + StringConverter::toString(_numEntities)+"SN");
+          nod->attachObject(ent);
+          nod->setPosition(node->getPosition());
+          nod->setOrientation(node->getOrientation());
+          _numEntities++;
+          //-----------------------------------------------------------------------------
           _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
         }
       }
     }
     //-------------------------------------------
-
-    /*Ogre::SceneNode* target = _sceneMgr->getSceneNode("Target0");
-
-    OgreBulletCollisions::Object *obTarget = _world->findObject(target);
-    OgreBulletCollisions::Object *obOB_A = _world->findObject(obA);
-    OgreBulletCollisions::Object *obOB_B = _world->findObject(obB);
-
-    if ((obOB_A == obTarget) || (obOB_B == obTarget)) {
-      Ogre::SceneNode* node = NULL;
-      cout << "PRIMER IF " << endl;
-
-      if ((obOB_A != obTarget) && (obOB_A)) {
-    		node = obOB_A->getRootNode(); 
-        delete obOB_A;
-    		cout << "SEGUNDO IF " << endl;
-      }
-      else if ((obOB_B != obTarget) && (obOB_B)) {
-    		node = obOB_B->getRootNode(); 
-        delete obOB_B;
-    		cout << "TERCERO IF " << endl;
-      }
-
-      if (node) {
-		    cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
-		    _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
-      }
-    }*/
   }
 }
 bool
@@ -328,7 +338,7 @@ PlayState::keyPressed
   //Movimiento camara---------------
   Vector3 vt(0,0,0);
   Real tSpeed = 20.0;
-  int _desp=25;
+  int _desp=5;
   if (e.key == OIS::KC_UP) {
     vt+=Vector3(0,0,-_desp);
   }
@@ -338,7 +348,7 @@ PlayState::keyPressed
   if (e.key == OIS::KC_LEFT) {
     vt+=Vector3(-_desp,0,0);
   }
-  if (e.key == OIS::KC_DOWN) {
+  if (e.key == OIS::KC_RIGHT) {
     vt+=Vector3(_desp,0,0);
   }
   _camera->moveRelative(vt * _deltaT * tSpeed);
@@ -442,3 +452,40 @@ PlayState::quit(const CEGUI::EventArgs &e)
   return true;
 }
 
+void
+PlayState::updateCameraPosition()
+{
+  cout<< "Pos camara: " << _camera->getPosition() << endl;
+
+  //Actualizacion de la posicion---------------------------
+  _camera->setPosition(_camera->getPosition()+_vnCam*_speedCam*_deltaT);
+  //-------------------------------------------------------
+
+  //Comprobacion de punto----------------------------------
+  int _distance=_next.distance(_camera->getPosition());
+  cout<< "Distancia: " << _distance << endl;
+  if(_distance==0){
+    cout<< "Cambio" << endl;
+    _now=_next;
+    _next=Vector3(-1,-1,-1);
+    cout<< "Next: " << _next << endl;
+    cout<< "Now: " << _now << endl;
+  }
+  //-------------------------------------------------------
+
+  //Siguiente Punto--------------------------------------
+  if(_next==Vector3(-1,-1,-1)){
+    cout<< "entro a Cambio" << endl;
+    _despCamera=Vector3(0,0,0);
+    if(_points.size()>0){
+      _next=_points.front();
+      _points.erase(_points.begin());
+      Vector3 _aux = _next-_now;
+      _vnCam= _aux.normalisedCopy();
+      cout<< "Next: " << _next << endl;
+      cout<< "Now: " << _now << endl;
+    }else{//Hemos llegado al ultimo punto (Se acabaria el recorrido )
+      _speedCam=0;
+    }
+  }
+}
