@@ -18,6 +18,9 @@ std::vector<Vector3> _points;
 int _speedCam = 10;
 Vector3 _vnCam;
 
+float _force=0.0;
+bool _mousePressed=false;
+
 void
 PlayState::enter ()
 {
@@ -92,6 +95,7 @@ PlayState::enter ()
   _points.push_back(p1);
   _points.push_back(p2);
   _points.push_back(p3);
+  _points.push_back(_camera->getPosition());
 
   //--------------------------------------------------------
 
@@ -146,11 +150,8 @@ PlayState::CreateInitialWorld() {
   rigidBodyPlane->setStaticShape(Shape, 0.1, 0.8); 
 
   // Anadimos los objetos Shape y RigidBody ------------------------
-  _shapes.push_back(Shape);
-  cout << "\n\nAqui\n\n" << endl;    
+  _shapes.push_back(Shape);  
   _bodies.push_back(rigidBodyPlane);//Aqui violacion de segmento ¿Por que?
-  
-  cout << "\n\nFin listas\n\n" << endl;
 
   //Añado una diana----------------
   AddStaticObject(Vector3(0,3,0));
@@ -168,7 +169,7 @@ PlayState::AddStaticObject(Vector3 pos) {
   SceneNode* nodeAim = _sceneMgr->createSceneNode("Target"+StringConverter::toString(_numEntities));
   nodeAim->attachObject(entAim);
   _sceneMgr->getRootSceneNode()->addChild(nodeAim);
-  cout<< "Nombre: " << nodeAim->getName() << endl;
+  //cout<< "Nombre: " << nodeAim->getName() << endl;
   OgreBulletCollisions::StaticMeshToShapeConverter *trimeshConverter2 = new 
   OgreBulletCollisions::StaticMeshToShapeConverter(entAim);
  
@@ -213,7 +214,14 @@ PlayState::AddDynamicObject() {
   rigidBox->setShape(node, boxShape,0.5 /* Restitucion */, 0.5 /* Friccion */,5.0 /* Masa */, position /* Posicion inicial */,
          quat /* Orientacion */);
 
-  rigidBox->setLinearVelocity(_camera->getDerivedDirection().normalisedCopy() * _arrowSpeed); 
+  //Compruebo que a fuerza no sea mas que la fuerza maxima permitida---
+  if(_force>50.0){
+    _force=50.0;
+  }
+  cout << "Fuerza: "<< _force << endl;
+  //-------------------------------------------------------------------
+
+  rigidBox->setLinearVelocity(_camera->getDerivedDirection().normalisedCopy() * _force); 
 
   _numEntities++;
 
@@ -234,13 +242,22 @@ PlayState::frameStarted
   _world->stepSimulation(_deltaT); // Actualizar simulacion Bullet
   _timeLastObject -= _deltaT;
 
-  DetectCollisionAim();
-
-  //Actualizacion de la camara-----------------------------
+  //Actualizacion de la camara--------------
   updateCameraPosition();
   //----------------------------------------
 
+  //Si estoy pulsado el raton aumento la fueza--
+  if(_mousePressed){
+    _force+=0.1;
+  }else{
+    _force = 0.0;
+  }
+  //--------------------------------------------
+
+  //Deteccion Colisones--------------------
+  DetectCollisionAim();
   //----------------------------------------
+
   return true;
 }
 
@@ -274,17 +291,17 @@ void PlayState::DetectCollisionAim() {
 
       if ((obOB_A == obTarget) || (obOB_B == obTarget)) {
         Ogre::SceneNode* node = NULL;
-        cout << "PRIMER IF " << endl;
+        cout << "PRIMER IF\n" <<endl;
 
         if ((obOB_A != obTarget) && (obOB_A)) {
           node = obOB_A->getRootNode(); 
           delete obOB_A;
-          cout << "SEGUNDO IF " << endl;
+          cout << "SEGUNDO IF\n" << endl;
         }
         else if ((obOB_B != obTarget) && (obOB_B)) {
           node = obOB_B->getRootNode(); 
           delete obOB_B;
-          cout << "TERCERO IF " << endl;
+          cout << "TERCERO IF\n" << endl;
         }
 
         if (node) {
@@ -330,9 +347,9 @@ PlayState::keyPressed
   //-----------------
 
   //Lanzo Flecha----
-  if (e.key == OIS::KC_A) {
-    AddDynamicObject();
-  }
+  //if (e.key == OIS::KC_A) {
+  //  AddDynamicObject();
+  //}
   //----------------
 
   //Movimiento camara---------------
@@ -399,6 +416,11 @@ PlayState::mousePressed
   //CEGUI--------------------------
   CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonDown(convertMouseButton(id));
   //-------------------------------
+  
+  //Pongo el raton a pulsado---
+  _mousePressed=true;
+  //---------------------------
+  
 }
 
 void
@@ -408,6 +430,11 @@ PlayState::mouseReleased
   //CEGUI--------------------------
   CEGUI::System::getSingleton().getDefaultGUIContext().injectMouseButtonUp(convertMouseButton(id));
   //-------------------------------
+
+  //Pongo el raton a levantado y disparo---
+  AddDynamicObject();
+  _mousePressed=false;
+  //---------------------------------------
 }
 
 PlayState*
@@ -455,7 +482,7 @@ PlayState::quit(const CEGUI::EventArgs &e)
 void
 PlayState::updateCameraPosition()
 {
-  cout<< "Pos camara: " << _camera->getPosition() << endl;
+  //cout<< "Pos camara: " << _camera->getPosition() << endl;
 
   //Actualizacion de la posicion---------------------------
   _camera->setPosition(_camera->getPosition()+_vnCam*_speedCam*_deltaT);
@@ -463,27 +490,27 @@ PlayState::updateCameraPosition()
 
   //Comprobacion de punto----------------------------------
   int _distance=_next.distance(_camera->getPosition());
-  cout<< "Distancia: " << _distance << endl;
+  //cout<< "Distancia: " << _distance << endl;
   if(_distance==0){
-    cout<< "Cambio" << endl;
+    //cout<< "Cambio" << endl;
     _now=_next;
     _next=Vector3(-1,-1,-1);
-    cout<< "Next: " << _next << endl;
-    cout<< "Now: " << _now << endl;
+    //cout<< "Next: " << _next << endl;
+    //cout<< "Now: " << _now << endl;
   }
   //-------------------------------------------------------
 
   //Siguiente Punto--------------------------------------
   if(_next==Vector3(-1,-1,-1)){
-    cout<< "entro a Cambio" << endl;
+    //cout<< "entro a Cambio" << endl;
     _despCamera=Vector3(0,0,0);
     if(_points.size()>0){
       _next=_points.front();
       _points.erase(_points.begin());
       Vector3 _aux = _next-_now;
       _vnCam= _aux.normalisedCopy();
-      cout<< "Next: " << _next << endl;
-      cout<< "Now: " << _now << endl;
+      //cout<< "Next: " << _next << endl;
+      //cout<< "Now: " << _now << endl;
     }else{//Hemos llegado al ultimo punto (Se acabaria el recorrido )
       _speedCam=0;
     }
