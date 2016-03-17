@@ -4,6 +4,7 @@
 #include "Shapes/OgreBulletCollisionsConvexHullShape.h"
 #include "Shapes/OgreBulletCollisionsTrimeshShape.h"    
 #include "Utils/OgreBulletCollisionsMeshToShapeConverter.h"
+#include "Shapes/OgreBulletCollisionsSphereShape.h"
 #include "OgreBulletCollisionsRay.h"
 
 using namespace std;
@@ -18,8 +19,16 @@ std::vector<Vector3> _points;
 int _speedCam = 10;
 Vector3 _vnCam;
 
+//Para parar en una zona y pasar a la siguiente---
+int _contZone = 1500;
+bool _nextZone = false;
+//-------------------------------------------------
+
+//Fuerza de las flechas----
 float _force=0.0;
+float _forceInc=0.2;
 bool _mousePressed=false;
+//-------------------------
 
 void
 PlayState::enter ()
@@ -151,25 +160,28 @@ PlayState::CreateInitialWorld() {
 
   // Anadimos los objetos Shape y RigidBody ------------------------
   _shapes.push_back(Shape);  
-  _bodies.push_back(rigidBodyPlane);//Aqui violacion de segmento ¿Por que?
+  _bodies.push_back(rigidBodyPlane);
 
   //Añado una diana----------------
-  AddStaticObject(Vector3(0,3,0));
+  AddStaticObject(Vector3(0,10,0));
   //-------------------------------
 
   //Añado otra diana---------------- 
-  AddStaticObject(Vector3(15,3,0));
+  AddStaticObject(Vector3(15,10,0));
   //-------------------------------
 
 }
 
 void 
 PlayState::AddStaticObject(Vector3 pos) {
+  
   Entity* entAim = _sceneMgr->createEntity("Cylinder.mesh");
-  SceneNode* nodeAim = _sceneMgr->createSceneNode("Target"+StringConverter::toString(_numEntities));
+  SceneNode* nodeAim = _sceneMgr->createSceneNode("Target"+StringConverter::toString(_numEntities)+"SN");
   nodeAim->attachObject(entAim);
   _sceneMgr->getRootSceneNode()->addChild(nodeAim);
-  //cout<< "Nombre: " << nodeAim->getName() << endl;
+  
+  cout << "Name" << nodeAim->getName() << endl;
+
   OgreBulletCollisions::StaticMeshToShapeConverter *trimeshConverter2 = new 
   OgreBulletCollisions::StaticMeshToShapeConverter(entAim);
  
@@ -180,7 +192,15 @@ PlayState::AddStaticObject(Vector3 pos) {
   rigidObject2->setShape(nodeAim, Trimesh2, 0.5, 0.5, 0,pos,//4º Posicion inicial 
        Quaternion::IDENTITY); //El 5º parametro es la gravedad
 
+  delete trimeshConverter2;
+
   _numEntities++;
+
+  // Anadimos los objetos a las deques---
+  _shapes.push_back(Trimesh2);   
+  _bodies.push_back(rigidObject2); 
+  //-------------------------------------
+  
 
 }
 
@@ -204,15 +224,13 @@ PlayState::AddDynamicObject() {
 
   OgreBulletCollisions::StaticMeshToShapeConverter *trimeshConverter = NULL;
   OgreBulletCollisions::CollisionShape *boxShape = NULL;
-  trimeshConverter = new 
-      OgreBulletCollisions::StaticMeshToShapeConverter(entity);
+  trimeshConverter = new OgreBulletCollisions::StaticMeshToShapeConverter(entity);
   boxShape = trimeshConverter->createConvex();
 
 
   OgreBulletDynamics::RigidBody *rigidBox = new OgreBulletDynamics::RigidBody("rigidBodyArrow" + StringConverter::toString(_numEntities), _world);
   
-  rigidBox->setShape(node, boxShape,0.5 /* Restitucion */, 0.5 /* Friccion */,5.0 /* Masa */, position /* Posicion inicial */,
-         quat /* Orientacion */);
+  rigidBox->setShape(node, boxShape,0.5 , 0.5 ,5.0 , position ,quat );
 
   //Compruebo que a fuerza no sea mas que la fuerza maxima permitida---
   if(_force>50.0){
@@ -225,11 +243,11 @@ PlayState::AddDynamicObject() {
 
   _numEntities++;
 
-  // Anadimos los objetos a las deques
+  // Anadimos los objetos a las deques---
   _shapes.push_back(boxShape);   
   _bodies.push_back(rigidBox); 
-
-  //-----------------------------------------------------------------
+  //-------------------------------------
+   
 
 }
 
@@ -248,7 +266,7 @@ PlayState::frameStarted
 
   //Si estoy pulsado el raton aumento la fueza--
   if(_mousePressed){
-    _force+=0.1;
+    _force+=_forceInc;
   }else{
     _force = 0.0;
   }
@@ -262,64 +280,7 @@ PlayState::frameStarted
 }
 
 void PlayState::DetectCollisionAim() {
-  btCollisionWorld *bulletWorld = _world->getBulletCollisionWorld();
-  int numManifolds = bulletWorld->getDispatcher()->getNumManifolds();
-
-  for (int i=0;i<numManifolds;i++) {
-    btPersistentManifold* contactManifold = bulletWorld->getDispatcher()->getManifoldByIndexInternal(i);
-    btCollisionObject* obA = (btCollisionObject*)(contactManifold->getBody0());
-    btCollisionObject* obB = (btCollisionObject*)(contactManifold->getBody1());
-    //Recupero todas las dianas----------------------------------
-    std::vector <SceneNode* > _targets;
-    SceneNode::ChildNodeIterator it = _sceneMgr->getRootSceneNode()->getChildIterator();
-    while (it.hasMoreElements()){
-      String _name = it.getNext()->getName();
-      if (StringUtil::startsWith(_name,"Target")){
-        _targets.push_back(_sceneMgr->getSceneNode(_name));
-      }
-      
-    }
-    //-----------------------------------------------------------
-    
-    //Recorrer el vector y comprobar cada diana--
-    for (SceneNode* tar : _targets ){
-      Ogre::SceneNode* target = tar;
-
-      OgreBulletCollisions::Object *obTarget = _world->findObject(target);
-      OgreBulletCollisions::Object *obOB_A = _world->findObject(obA);
-      OgreBulletCollisions::Object *obOB_B = _world->findObject(obB);
-
-      if ((obOB_A == obTarget) || (obOB_B == obTarget)) {
-        Ogre::SceneNode* node = NULL;
-        cout << "PRIMER IF\n" <<endl;
-
-        if ((obOB_A != obTarget) && (obOB_A)) {
-          node = obOB_A->getRootNode(); 
-          delete obOB_A;
-          cout << "SEGUNDO IF\n" << endl;
-        }
-        else if ((obOB_B != obTarget) && (obOB_B)) {
-          node = obOB_B->getRootNode(); 
-          delete obOB_B;
-          cout << "TERCERO IF\n" << endl;
-        }
-
-        if (node) {
-          cout << "Nodo que colisiona: "+node->getName() << endl; //LO eliminamos
-          //Creo una copia del nodo y lo pongo en la misma posicion y rotacion------------
-          Entity *ent = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow.mesh");
-          SceneNode *nod = _sceneMgr->getRootSceneNode()->createChildSceneNode("Arrow" + StringConverter::toString(_numEntities)+"SN");
-          nod->attachObject(ent);
-          nod->setPosition(node->getPosition());
-          nod->setOrientation(node->getOrientation());
-          _numEntities++;
-          //-----------------------------------------------------------------------------
-          _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
-        }
-      }
-    }
-    //-------------------------------------------
-  }
+  
 }
 bool
 PlayState::frameEnded
@@ -345,12 +306,6 @@ PlayState::keyPressed
     pushState(PauseState::getSingletonPtr());
   }
   //-----------------
-
-  //Lanzo Flecha----
-  //if (e.key == OIS::KC_A) {
-  //  AddDynamicObject();
-  //}
-  //----------------
 
   //Movimiento camara---------------
   Vector3 vt(0,0,0);
@@ -482,35 +437,35 @@ PlayState::quit(const CEGUI::EventArgs &e)
 void
 PlayState::updateCameraPosition()
 {
-  //cout<< "Pos camara: " << _camera->getPosition() << endl;
-
   //Actualizacion de la posicion---------------------------
   _camera->setPosition(_camera->getPosition()+_vnCam*_speedCam*_deltaT);
   //-------------------------------------------------------
 
   //Comprobacion de punto----------------------------------
   int _distance=_next.distance(_camera->getPosition());
-  //cout<< "Distancia: " << _distance << endl;
   if(_distance==0){
-    //cout<< "Cambio" << endl;
-    _now=_next;
-    _next=Vector3(-1,-1,-1);
-    //cout<< "Next: " << _next << endl;
-    //cout<< "Now: " << _now << endl;
+    _speedCam=0;
+    if(--_contZone<0){
+      _contZone=1500;
+      _nextZone=true;
+    }
+    if(_nextZone){
+      _now=_next;
+      _next=Vector3(-1,-1,-1);
+      _nextZone=false;
+    }
   }
   //-------------------------------------------------------
 
   //Siguiente Punto--------------------------------------
   if(_next==Vector3(-1,-1,-1)){
-    //cout<< "entro a Cambio" << endl;
+    _speedCam=10;
     _despCamera=Vector3(0,0,0);
     if(_points.size()>0){
       _next=_points.front();
       _points.erase(_points.begin());
       Vector3 _aux = _next-_now;
       _vnCam= _aux.normalisedCopy();
-      //cout<< "Next: " << _next << endl;
-      //cout<< "Now: " << _now << endl;
     }else{//Hemos llegado al ultimo punto (Se acabaria el recorrido )
       _speedCam=0;
     }
