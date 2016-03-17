@@ -1,16 +1,16 @@
-// Material.001 genrated by blender2ogre 0.6.0
+// bowArrowQuiver genrated by blender2ogre 0.6.0
 
-material Material.001 
+material bowArrowQuiver 
 {
     receive_shadows on 
 
     technique
     {
-        pass Material.001
+        pass bowArrowQuiver
         {
-            ambient 0.15000000596046448 0.15000000596046448 0.15000000596046448 1.0
-            diffuse 0.120000006556511 0.120000006556511 0.120000006556511 1.0
-            specular 0.5 0.5 0.5 1.0 12.5
+            ambient 0.7742581367492676 0.2796960771083832 0.0 1.0
+            diffuse 0.6194065186292903 0.2237568650209436 0.0 1.0
+            specular 0.0 0.0 0.0 1.0 12.5
             emissive 0.0 0.0 0.0 1.0
 
             alpha_to_coverage off

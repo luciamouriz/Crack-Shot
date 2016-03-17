@@ -210,7 +210,7 @@ PlayState::AddDynamicObject() {
 
   Vector3 position = (_camera->getDerivedPosition() + _camera->getDerivedDirection().normalisedCopy() * 10);
  
-  Entity *entity = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow.mesh");
+  Entity *entity = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow2.mesh");
   SceneNode *node = _sceneMgr->getRootSceneNode()->createChildSceneNode("Arrow" + StringConverter::toString(_numEntities)+"SN");
   node->attachObject(entity);
 
@@ -225,7 +225,13 @@ PlayState::AddDynamicObject() {
   OgreBulletCollisions::StaticMeshToShapeConverter *trimeshConverter = NULL;
   OgreBulletCollisions::CollisionShape *boxShape = NULL;
   trimeshConverter = new OgreBulletCollisions::StaticMeshToShapeConverter(entity);
-  boxShape = trimeshConverter->createConvex();
+  
+  AxisAlignedBox boundingB = entity->getBoundingBox();
+  Vector3 size = boundingB.getSize(); 
+  size /= 2.0f;   // El tamano en Bullet se indica desde el centro
+  size=Vector3(2.3, 0.6, 0.6);
+  cout << "Size: " << size << endl;
+  boxShape = new OgreBulletCollisions::BoxCollisionShape(size);
 
 
   OgreBulletDynamics::RigidBody *rigidBox = new OgreBulletDynamics::RigidBody("rigidBodyArrow" + StringConverter::toString(_numEntities), _world);
@@ -280,7 +286,47 @@ PlayState::frameStarted
 }
 
 void PlayState::DetectCollisionAim() {
-  
+  //Colisiones------------------------------
+  btCollisionWorld *bulletWorld = _world->getBulletCollisionWorld();
+  int numManifolds = bulletWorld->getDispatcher()->getNumManifolds();
+
+  for (int i=0;i<numManifolds;i++) {
+    btPersistentManifold* contactManifold = 
+      bulletWorld->getDispatcher()->getManifoldByIndexInternal(i);
+    btCollisionObject* obA = 
+      (btCollisionObject*)(contactManifold->getBody0());
+    btCollisionObject* obB = 
+      (btCollisionObject*)(contactManifold->getBody1());
+    
+    Ogre::SceneNode* drain = _sceneMgr->getSceneNode("Target0SN");
+
+    OgreBulletCollisions::Object *obDrain = _world->findObject(drain);
+    OgreBulletCollisions::Object *obOB_A = _world->findObject(obA);
+    OgreBulletCollisions::Object *obOB_B = _world->findObject(obB);
+
+    if ((obOB_A == obDrain) || (obOB_B == obDrain)) {
+      Ogre::SceneNode* node = NULL;
+      if ((obOB_A != obDrain) && (obOB_A)) {
+        node = obOB_A->getRootNode(); delete obOB_A;
+      }
+      else if ((obOB_B != obDrain) && (obOB_B)) {
+        node = obOB_B->getRootNode(); delete obOB_B;
+      }
+      if (node) {
+        cout << "Nodo que colisiona: " << node->getName() << endl;
+        //Creo una flecha en la misma posicion y rotacion---
+        Entity *ent = _sceneMgr->createEntity("Arrow" + StringConverter::toString(_numEntities), "arrow2.mesh");
+        SceneNode *nod = _sceneMgr->getRootSceneNode()->createChildSceneNode("Arrow" + StringConverter::toString(_numEntities)+"SN");
+        nod->attachObject(ent);
+        nod->setPosition(node->getPosition());
+        nod->setOrientation(node->getOrientation());
+        _numEntities++;
+        //--------------------------------------------------
+        _sceneMgr->getRootSceneNode()->removeAndDestroyChild (node->getName());
+      }
+    } 
+  }
+  //----------------------------------------  
 }
 bool
 PlayState::frameEnded
@@ -467,6 +513,7 @@ PlayState::updateCameraPosition()
       Vector3 _aux = _next-_now;
       _vnCam= _aux.normalisedCopy();
     }else{//Hemos llegado al ultimo punto (Se acabaria el recorrido )
+      cout << "Fin Recorrido\n" << endl;
       _speedCam=0;
     }
   }
